@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML 实时预览与图片保存工具</title>
+    <style>
+        /* 之前的样式保持不变 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .editor-container, .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .editor-container {
+            border-right: 1px solid #ccc;
+        }
+        .label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 5px;
+            background-color: #f0f0f0;
+        }
+        #html-editor {
+            flex: 1;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            resize: none;
+            tab-size: 4;
+        }
+        #preview-frame {
+            flex: 1;
+            width: 100%;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+        .buttons {
+            padding: 10px;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #save-btn {
+            background-color: #2196F3;
+        }
+        #save-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <!-- 之前的HTML结构保持不变 -->
+    <div class="header">
+        <h1>HTML 实时预览与图片保存工具</h1>
+    </div>
+    <div class="container">
+        <div class="editor-container">
+            <div class="label">HTML 代码编辑器</div>
+            <textarea id="html-editor" spellcheck="false"><!DOCTYPE html>
+<html>
+<head>
+    <title>示例页面</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: 100%;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .box {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px auto;
+            max-width: 300px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>欢迎使用预览工具</h1>
+    <div class="box">
+        <p>编辑左侧代码，右侧将实时显示效果</p>
+        <p>点击下方按钮可将预览保存为图片</p>
+    </div>
+</body>
+</html></textarea>
+        </div>
+        <div class="preview-container">
+            <div class="label">实时预览</div>
+            <iframe id="preview-frame"></iframe>
+        </div>
+    </div>
+    <div class="buttons">
+        <button id="save-btn">保存为图片</button>
+        <button id="reset-btn">重置代码</button>
+    </div>
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        // 获取DOM元素
+        const htmlEditor = document.getElementById('html-editor');
+        const previewFrame = document.getElementById('preview-frame');
+        const saveBtn = document.getElementById('save-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        
+        // 初始预览
+        updatePreview();
+        
+        // 监听编辑器内容变化
+        htmlEditor.addEventListener('input', updatePreview);
+        
+        // 更新预览函数
+        function updatePreview() {
+            const htmlCode = htmlEditor.value;
+            const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            
+            previewDoc.open();
+            previewDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                            min-height: 100%;
+                            width: 100%;
+                        }
+                        body {
+                            display: block !important;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${htmlCode}
+                </body>
+                </html>
+            `);
+            previewDoc.close();
+        }
+        
+        // 保存为图片
+        saveBtn.addEventListener('click', async () => {
+            try {
+                const previewWindow = previewFrame.contentWindow;
+                const previewDocument = previewFrame.contentDocument;
+                const previewBody = previewDocument.body;
+                
+                // 确保所有资源加载完成
+                await new Promise(resolve => {
+                    if (previewDocument.readyState === 'complete') {
+                        resolve();
+                    } else {
+                        previewWindow.addEventListener('load', resolve);
+                    }
+                });
+                
+                // 临时调整样式以确保正确捕获
+                const originalStyles = {
+                    overflow: previewBody.style.overflow,
+                    position: previewBody.style.position,
+                    width: previewBody.style.width
+                };
+                
+                previewBody.style.overflow = 'visible';
+                previewBody.style.position = 'relative';
+                previewBody.style.width = 'fit-content';
+                
+                // 获取实际内容尺寸
+                const contentWidth = previewBody.scrollWidth;
+                const contentHeight = previewBody.scrollHeight;
+                
+                // 使用html2canvas捕获内容
+                const canvas = await html2canvas(previewBody, {
+                    scale: 1,  // 改为1，不再放大
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: contentWidth,
+                    height: contentHeight,
+                    windowWidth: contentWidth,
+                    windowHeight: contentHeight
+                });
+                
+                // 恢复原始样式
+                previewBody.style.overflow = originalStyles.overflow;
+                previewBody.style.position = originalStyles.position;
+                previewBody.style.width = originalStyles.width;
+                
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.download = 'html-preview-' + new Date().toISOString().slice(0, 10) + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (error) {
+                console.error('保存图片时出错:', error);
+                alert('保存图片时出错: ' + error.message);
+            }
+        });
+        
+        // 重置代码
+        resetBtn.addEventListener('click', () => {
+            if (confirm('确定要重置代码吗？所有编辑内容将丢失。')) {
+                htmlEditor.value = `<!DOCTYPE html>
+<html>
+<head>
+    <title>示例页面</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: 100%;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .box {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px auto;
+            max-width: 300px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>欢迎使用预览工具</h1>
+    <div class="box">
+        <p>编辑左侧代码，右侧将实时显示效果</p>
+        <p>点击下方按钮可将预览保存为图片</p>
+    </div>
+</body>
+</html>`;
+                updatePreview();
+            }
+        });
+    </script>
+</body>
+</html>
